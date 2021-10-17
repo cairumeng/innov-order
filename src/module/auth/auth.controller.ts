@@ -20,6 +20,7 @@ export class AuthController {
 
   @Post('login')
   async login(@Body() authDTO: AuthDTO) {
-    return this.authService.login(authDTO);
+    const token = await this.authService.login(authDTO);
+    return { token };
   }
 }

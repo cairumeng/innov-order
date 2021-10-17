@@ -34,8 +34,8 @@ export class AuthService {
     return await this.generateJWT(user);
   }
 
-  private generateJWT(user: User): Promise<string> {
-    return this.jwtService.signAsync({ user });
+  public async generateJWT(user: User): Promise<string> {
+    return await this.jwtService.signAsync({ user });
   }
 
   private async existingUser(email: string): Promise<User> {
