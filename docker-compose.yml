@@ -1,0 +1,46 @@
+version: '3.5'
+
+services:
+  mysql:
+    image: mysql:5.7
+    container_name: innov_mysql
+    volumes:
+      - mydata:/var/lib/mysql
+      - ./init:/docker-entrypoint-initdb.d
+    ports:
+      - 3308:3306
+    networks:
+      - core_service_network
+    environment:
+      - MYSQL_ROOT_PASSWORD=root
+      - MYSQL_DATABASE=innov
+      - MYSQL_PASSWORD=root
+
+  nestjs:
+    build: .
+    working_dir: /var/www/innov
+    restart: always
+    container_name: innov_nestjs
+    environment:
+      - DATABASE_HOST=mysql
+      - DATABASE_USERNAME=root
+      - DATABASE_PASSWORD=root
+      - DATABASE_NAME=innov
+      - DATABASE_PORT=3306
+      - JWT_SECRET=jklasjdoij897231na
+    ports:
+      - 3000:3000
+    volumes:
+      - .:/var/www/innov
+      - /var/www/innov/node_modules
+    command: 'npm run start:dev'
+    depends_on:
+      - mysql
+    networks:
+      - core_service_network
+
+networks:
+  core_service_network:
+
+volumes:
+  mydata:
