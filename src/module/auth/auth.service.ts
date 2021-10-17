@@ -1,12 +1,15 @@
 import { Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { User } from 'src/entity/User';
+import { User } from '../../entity/User';
+import { UpdateResult } from 'typeorm';
+import { PasswordDTO } from './dtos/password.dto';
 import { UsersService } from '../users/users.service';
 import { AuthDTO } from './dtos/auth.dto';
 import { EmailTakenError } from './errors/email-taken.error';
 import { PasswordDoesntMatchError } from './errors/password-not-match.error';
 import { UserNotExistError } from './errors/user-not-exist.error';
 import { comparePasswords, encryptPassword } from './helpers/password.helper';
+import { isNotEmpty } from 'class-validator';
 
 @Injectable()
 export class AuthService {
@@ -32,6 +35,21 @@ export class AuthService {
       throw new PasswordDoesntMatchError();
     }
     return await this.generateJWT(user);
+  }
+
+  public async changePassword(
+    user: User,
+    { newPassword, currentPassword }: PasswordDTO,
+  ): Promise<UpdateResult> {
+    if (!(await comparePasswords(currentPassword, user.password))) {
+      throw new PasswordDoesntMatchError();
+    }
+    return await this.usersService.update(
+      { id: user.id },
+      {
+        password: await encryptPassword(newPassword),
+      },
+    );
   }
 
   public async generateJWT(user: User): Promise<string> {

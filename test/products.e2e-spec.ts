@@ -7,10 +7,8 @@ import {
 import { ConfigModule } from '@nestjs/config';
 import { Test } from '@nestjs/testing';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { User } from '../src/entity/User';
 import { UsersModule } from '../src/module/users/users.module';
 import * as request from 'supertest';
-import { Repository } from 'typeorm';
 import { AuthModule } from '../src/module/auth/auth.module';
 import { ProductsModule } from '../src/module/products/products.module';
 import axios from 'axios';
@@ -20,11 +18,10 @@ jest.mock('axios');
 const mockAxios = axios as jest.Mocked<typeof axios>;
 
 let app: INestApplication;
-let repository: Repository<User>;
 const TOKEN = 'kdj23k4s';
 
 beforeAll(async () => {
-  const module = await Test.createTestingModule({
+  const productTestModule = await Test.createTestingModule({
     imports: [
       ConfigModule.forRoot({ isGlobal: true }),
       TypeOrmModule.forRoot(typeormConfig),
@@ -44,10 +41,8 @@ beforeAll(async () => {
       },
     })
     .compile();
-  app = module.createNestApplication();
+  app = productTestModule.createNestApplication();
   await app.init();
-
-  repository = module.get<Repository<User>>('UserRepository');
 });
 
 afterAll(async () => {

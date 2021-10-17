@@ -21,4 +21,8 @@ export class UsersService {
   public async findOne(params): Promise<User> {
     return await this.usersRepository.findOne(params);
   }
+
+  public async update(params, attributes) {
+    return await this.usersRepository.update(params, attributes);
+  }
 }

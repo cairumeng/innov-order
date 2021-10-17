@@ -7,7 +7,7 @@ const typeormConfig: TypeOrmModuleOptions = {
   port: 3306,
   username: 'root',
   password: 'root',
-  database: 'innov_test',
+  database: 'innov-test',
   entities: [User],
   autoLoadEntities: true,
   synchronize: true,

@@ -1,4 +1,8 @@
-import { INestApplication } from '@nestjs/common';
+import {
+  ExecutionContext,
+  INestApplication,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { User } from '../src/entity/User';
@@ -9,23 +13,41 @@ import { AuthModule } from '../src/module/auth/auth.module';
 import { ConfigModule } from '@nestjs/config';
 import { encryptPassword } from '../src/module/auth/helpers/password.helper';
 import typeormConfig from './typeorm.config';
+import { JwtAuthGuard } from '../src/module/auth/guards/jwt-guard';
 
 let app: INestApplication;
 let repository: Repository<User>;
 
+const TOKEN = 'ahkf3hk4af';
+
 beforeAll(async () => {
-  const module = await Test.createTestingModule({
+  const authTestModule = await Test.createTestingModule({
     imports: [
       ConfigModule.forRoot({ isGlobal: true }),
       TypeOrmModule.forRoot(typeormConfig),
       UsersModule,
       AuthModule,
     ],
-  }).compile();
-  app = module.createNestApplication();
-  await app.init();
+  })
+    .overrideGuard(JwtAuthGuard)
+    .useValue({
+      async canActivate(context: ExecutionContext) {
+        const req = context.switchToHttp().getRequest();
+        if (!req.headers['authorization']) throw new UnauthorizedException();
 
-  repository = module.get<Repository<User>>('UserRepository');
+        const user = await repository.findOneOrFail({
+          email: 'test@gmail.com',
+        });
+
+        req.user = user;
+        return req.headers['authorization'] === `Bearer ${TOKEN}`;
+      },
+    })
+    .compile();
+  repository = authTestModule.get<Repository<User>>('UserRepository');
+
+  app = authTestModule.createNestApplication();
+  await app.init();
 });
 
 beforeEach(async () => {
@@ -33,7 +55,6 @@ beforeEach(async () => {
     { email: 'test@gmail.com', password: await encryptPassword('1234567') },
   ]);
 });
-
 afterEach(async () => {
   await repository.query(`DELETE FROM users;`);
 });
@@ -108,6 +129,46 @@ describe('POST /login', () => {
     const { body } = await request(app.getHttpServer())
       .post('/auth/login')
       .send({ email: 'test@gmail.com', password: '12345678' })
+      .expect(403);
+    expect(body.message).toEqual('The password is not correct.');
+  });
+});
+
+describe('PATCH /change-password', () => {
+  it('should fail when not login', async () => {
+    const { body } = await request(app.getHttpServer())
+      .patch('/auth/change-password')
+      .send({ currentPassword: '1234567', newPassword: '123456789' })
+      .expect(401);
+
+    expect(body.message).toEqual('Unauthorized');
+  });
+
+  it('should success when login', async () => {
+    const { body } = await request(app.getHttpServer())
+      .patch('/auth/change-password')
+      .set('Authorization', `Bearer ${TOKEN}`)
+      .send({ currentPassword: '1234567', newPassword: '123456789' })
+      .expect(200);
+    expect(body.affected).toEqual(1);
+  });
+
+  it('should fail when newpassword is shorter than 6', async () => {
+    const { body } = await request(app.getHttpServer())
+      .patch('/auth/change-password')
+      .set('Authorization', `Bearer ${TOKEN}`)
+      .send({ currentPassword: '1234567', newPassword: '12345' })
+      .expect(400);
+    expect(body.message).toEqual([
+      'Password should not be shorter than 6 characters',
+    ]);
+  });
+
+  it('should fail when newpassword is shorter than 6', async () => {
+    const { body } = await request(app.getHttpServer())
+      .patch('/auth/change-password')
+      .set('Authorization', `Bearer ${TOKEN}`)
+      .send({ currentPassword: '123459', newPassword: '123456789' })
       .expect(403);
     expect(body.message).toEqual('The password is not correct.');
   });
