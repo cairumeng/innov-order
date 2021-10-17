@@ -20,7 +20,7 @@ $ docker-compose up --build
 
 ```bash
 # unit tests
-$ docker exec -it backend_nestjs sh
+$ docker exec -it innov_nestjs sh
 
 # e2e tests
 $ npm run test:e2e
